@@ -1,0 +1,23 @@
+{
+  "name": "jls-toolbox",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -F jls-toolbox run dev",
+    "build": "pnpm -F jls-toolbox run build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": ">=2.0.0",
+    "@tauri-apps/plugin-shell": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": ">=2.0.0",
+    "typescript": "^5.2.2"
+  }
+}
