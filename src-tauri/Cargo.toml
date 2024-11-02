@@ -26,4 +26,6 @@ rfd = "0.15.0"
 anyhow = "1.0.91"
 image = "0.25.4"
 oxipng = "9.1.2"
+rayon = "1.10.0"
+thiserror = "1.0.66"
 

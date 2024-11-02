@@ -1,9 +1,28 @@
 use anyhow::{Context, Result};
 use image::ImageFormat;
 use oxipng::{optimize_from_memory, Options};
+use rayon::prelude::*;
 use rfd::FileDialog;
-use std::fs;
 use std::io::{Cursor, Write};
+use std::{fs, time};
+use tauri::Emitter;
+
+#[derive(serde::Serialize)]
+pub struct CompressImageResult {
+    pub original_size: u64,
+    pub compressed_size: u64,
+    pub compression_ratio: f64,
+    pub output_path: String,
+    pub input_path: String,
+    pub is_compressed: bool,
+}
+
+struct _CompressResult {
+    list: Vec<CompressImageResult>,
+    total_original_size: u64,
+    total_compressed_size: u64,
+    total_compression_ratio: f64,
+}
 
 pub fn compress_image_form_path<P: AsRef<std::path::Path>>(
     input_path: P,
@@ -21,7 +40,7 @@ pub fn compress_image_form_path<P: AsRef<std::path::Path>>(
     let format = match input_path.as_ref().extension().and_then(|s| s.to_str()) {
         Some("jpg") | Some("jpeg") => ImageFormat::Jpeg,
         Some("png") => ImageFormat::Png,
-        Some("gif") => ImageFormat::Gif,
+        // Some("gif") => ImageFormat::Gif,
         Some("bmp") => ImageFormat::Bmp,
         _ => return Err(anyhow::anyhow!("Unsupported file format")),
     };
@@ -70,35 +89,61 @@ pub fn pick_images() -> Result<Vec<std::path::PathBuf>> {
         .pick_files();
 
     // 检查用户是否选择了文件
-    let file_paths = file_paths.with_context(|| "No files selected")?;
+    let file_paths = file_paths.unwrap_or(Vec::new());
 
     Ok(file_paths)
 }
 
-pub fn compress_image() -> Result<Vec<(String, String, u64, u64, f64)>> {
+pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>> {
     let file_paths = pick_images().context("Failed to pick files")?;
     if file_paths.is_empty() {
         return Ok(Vec::new());
     }
-    let mut result = Vec::new();
-    for file_path in file_paths {
-        let output_path = file_path.with_extension(format!(
-            "compressed.{}",
-            file_path.extension().unwrap().to_str().unwrap()
-        ));
-        let (original_size, compressed_size) =
-            compress_image_form_path(&file_path, &output_path).unwrap();
 
-        let compression_ratio = (original_size as f64 - compressed_size as f64) / original_size as f64 * 100.0;
+    let start = time::Instant::now();
 
-        result.push((
-            file_path.display().to_string(),
-            output_path.display().to_string(),
-            original_size / 1024,
-            compressed_size / 1024,
-            compression_ratio
-        ));
-    }
+    file_paths.iter().for_each(|file_path| {
+        let result = CompressImageResult {
+            original_size: 0,
+            compressed_size: 0,
+            compression_ratio: 0.0,
+            output_path: file_path.display().to_string(),
+            input_path: file_path.display().to_string(),
+            is_compressed: false,
+        };
+        app.emit("compress-image", &result).unwrap();
+    });
+    // 使用 rayon 并行处理
+    let list: Vec<CompressImageResult> = file_paths
+        .par_iter()
+        .map(|file_path| {
+            let output_path = file_path.with_extension(format!(
+                "compressed.{}",
+                file_path.extension().unwrap().to_str().unwrap()
+            ));
 
-    Ok(result)
+            let (original_size, compressed_size) =
+                compress_image_form_path(&file_path, &&output_path).unwrap();
+
+            let compression_ratio =
+                (original_size as f64 - compressed_size as f64) / original_size as f64 * 100.0;
+
+            let result = CompressImageResult {
+                original_size: original_size / 1024,
+                compressed_size: compressed_size / 1024,
+                compression_ratio,
+                output_path: output_path.display().to_string(),
+                input_path: file_path.display().to_string(),
+                is_compressed: true,
+            };
+            app.emit("compress-image", &result).unwrap();
+            result
+        })
+        .collect();
+
+    println!(
+        "Compress image took {:.2} ms",
+        start.elapsed().as_micros() as f64 / 1000.0
+    );
+    Ok(list)
 }
