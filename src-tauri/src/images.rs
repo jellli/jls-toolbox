@@ -15,6 +15,7 @@ pub struct CompressImageResult {
     pub output_path: String,
     pub input_path: String,
     pub is_compressed: bool,
+    pub duration: f64,
 }
 
 struct _CompressResult {
@@ -27,7 +28,8 @@ struct _CompressResult {
 pub fn compress_image_form_path<P: AsRef<std::path::Path>>(
     input_path: P,
     output_path: P,
-) -> Result<(u64, u64)> {
+) -> Result<(u64, u64, f64)> {
+    let start = time::Instant::now();
     // 打开原始图片
     let img = image::open(&input_path).context("Failed to open image file")?;
 
@@ -64,7 +66,8 @@ pub fn compress_image_form_path<P: AsRef<std::path::Path>>(
         // 获取压缩后的大小
         let compressed_size = output_data.len() as u64;
 
-        return Ok((original_size, compressed_size));
+        let duration = start.elapsed().as_micros() as f64 / 1000.0;
+        return Ok((original_size, compressed_size, duration));
     }
 
     // 压缩并保存图片
@@ -77,8 +80,8 @@ pub fn compress_image_form_path<P: AsRef<std::path::Path>>(
 
     // 获取压缩后的大小
     let compressed_size = buffer.len() as u64;
-
-    Ok((original_size, compressed_size))
+    let duration = start.elapsed().as_micros() as f64 / 1000.0;
+    Ok((original_size, compressed_size, duration))
 }
 
 pub fn pick_images() -> Result<Vec<std::path::PathBuf>> {
@@ -110,6 +113,7 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
             output_path: file_path.display().to_string(),
             input_path: file_path.display().to_string(),
             is_compressed: false,
+            duration: 0.0,
         };
         app.emit("compress-image", &result).unwrap();
     });
@@ -122,7 +126,7 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
                 file_path.extension().unwrap().to_str().unwrap()
             ));
 
-            let (original_size, compressed_size) =
+            let (original_size, compressed_size, duration) =
                 compress_image_form_path(&file_path, &&output_path).unwrap();
 
             let compression_ratio =
@@ -135,6 +139,7 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
                 output_path: output_path.display().to_string(),
                 input_path: file_path.display().to_string(),
                 is_compressed: true,
+                duration,
             };
             app.emit("compress-image", &result).unwrap();
             result
