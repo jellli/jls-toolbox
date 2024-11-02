@@ -106,8 +106,11 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
     let start = time::Instant::now();
 
     file_paths.iter().for_each(|file_path| {
+        let original_size = fs::metadata(&file_path)
+            .context("Failed to read file metadata").unwrap()
+            .len();
         let result = CompressImageResult {
-            original_size: 0,
+            original_size: original_size / 1024,
             compressed_size: 0,
             compression_ratio: 0.0,
             output_path: file_path.display().to_string(),

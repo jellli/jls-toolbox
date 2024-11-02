@@ -10,7 +10,8 @@
     "dev": "pnpm -F jls-toolbox run dev",
     "build": "pnpm -F jls-toolbox run build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ui": "pnpm -F jls-toolbox run ui"
   },
   "dependencies": {
     "@tauri-apps/api": ">=2.0.0",

@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
   },
   // Configure assetPrefix or else the server won't properly resolve your assets.
   assetPrefix: isProd ? undefined : `http://${internalHost}:1420`,
+  async redirects() {
+    return [
+      {
+        source: '/image',
+        destination: '/image/image-compress',
+        permanent: true,
+      },
+    ]
+  }
 };
 
 export default nextConfig;

@@ -6,15 +6,8 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { listen } from "@tauri-apps/api/event";
+import { Folder, LoaderCircle, X } from "lucide-react";
 
-// pub struct CompressImageResult {
-//   pub original_size: u64,
-//   pub compressed_size: u64,
-//   pub compression_ratio: f64,
-//   pub output_path: String,
-//   pub input_path: String,
-//   pub is_compressed: bool,
-// }
 type CompressResult = {
   original_size: number;
   compressed_size: number;
@@ -64,22 +57,34 @@ const ImageCompressor = () => {
   }, []);
   return (
     <div className={cn("p-4")}>
-      <Button
-        className={cn("capitalize")}
-        variant="outline"
-        onClick={() => {
-          invoke("compress_image_command");
-        }}
-      >
-        select file
-      </Button>
+      <div className={cn("flex space-x-2")}>
+        <Button
+          className={cn("capitalize")}
+          // variant="outline"
+          size="sm"
+          onClick={() => {
+            invoke("compress_image_command");
+          }}
+        >
+          <Folder /> select file
+        </Button>
+        <Button
+          className={cn("capitalize")}
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setCompressedResult([]);
+            setSummary({ total_saved_size: 0, total_saved_size_ratio: 0 });
+          }}
+        >
+          <X />
+        </Button>
+      </div>
 
-      <div className={cn("mt-4 rounded-lg overflow-scroll")}>
-        <div className={cn("flex justify-between bg-gray-200 py-2 px-4 text-sm")}>
-          {/* <div>
-            <span className="capitalize mr-1">duration: </span>
-            <span className={cn("font-bold")}>{duration}ms</span>
-          </div> */}
+      <div className={cn("mt-4 rounded-lg overflow-scroll w-full")}>
+        <div
+          className={cn("flex justify-between bg-gray-200 py-2 px-4 text-sm")}
+        >
           <div>
             <span className="capitalize mr-1">total optimized images: </span>
             <span className={cn("font-bold")}>{compressedResult.length}</span>
@@ -93,7 +98,10 @@ const ImageCompressor = () => {
           <div>
             <span className="capitalize mr-1">saved ratio:</span>
             <span className={cn("font-bold text-green-600")}>
-              {summary.total_saved_size_ratio.toFixed(2)}%
+              {(
+                summary.total_saved_size_ratio / (compressedResult.length || 1)
+              ).toFixed(2)}
+              %
             </span>
           </div>
         </div>
@@ -116,11 +124,11 @@ const ImageCompressor = () => {
                 >
                   <div className={cn("flex")}>
                     <div className={cn("w-10 h-10 mr-4 border rounded-lg")}>
-                      {/* <img
+                      <img
                         src={convertFileSrc(output_path)}
                         alt={filename}
                         className={cn("w-full h-full rounded-lg")}
-                      /> */}
+                      />
                     </div>
                     <div>
                       <h3 className={cn("text-sm mb-1 font-bold")}>
@@ -145,11 +153,27 @@ const ImageCompressor = () => {
                       "text-xs text-gray-500 flex flex-col justify-center w-24"
                     )}
                   >
-                    <div className={cn("text-green-500")}>
-                      -{compression_ratio.toFixed(2)}%
-                    </div>
-                    <div>{compressed_size}KB</div>
-                    <div>{rest.duration.toFixed(0)}ms</div>
+                    {rest.is_compressed ? (
+                      <>
+                        <div
+                          className={cn({
+                            "text-green-500": compression_ratio > 0,
+                            "text-red-500": compression_ratio < 0,
+                          })}
+                        >
+                          {compression_ratio > 0 ? "" : "+"}
+                          {(-compression_ratio).toFixed(2)}%
+                        </div>
+                        <div>{compressed_size}KB</div>
+                        <div>{rest.duration.toFixed(0)}ms</div>
+                      </>
+                    ) : (
+                      // infinite spin
+                      <LoaderCircle 
+                        className={cn("animate-spin")}
+                        size={24}
+                       />
+                    )}
                   </div>
                 </li>
               );
