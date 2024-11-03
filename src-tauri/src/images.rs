@@ -9,12 +9,13 @@ use tauri::Emitter;
 
 #[derive(serde::Serialize)]
 pub struct CompressImageResult {
+    pub id: String,
     pub original_size: u64,
     pub compressed_size: u64,
     pub compression_ratio: f64,
     pub output_path: String,
     pub input_path: String,
-    pub is_compressed: bool,
+    pub status: String,
     pub duration: f64,
 }
 
@@ -107,15 +108,17 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
 
     file_paths.iter().for_each(|file_path| {
         let original_size = fs::metadata(&file_path)
-            .context("Failed to read file metadata").unwrap()
+            .context("Failed to read file metadata")
+            .unwrap()
             .len();
         let result = CompressImageResult {
+            id: file_path.display().to_string(),
             original_size: original_size / 1024,
             compressed_size: 0,
             compression_ratio: 0.0,
             output_path: file_path.display().to_string(),
             input_path: file_path.display().to_string(),
-            is_compressed: false,
+            status: "processing".to_string(),
             duration: 0.0,
         };
         app.emit("compress-image", &result).unwrap();
@@ -136,12 +139,13 @@ pub fn compress_image(app: &tauri::AppHandle) -> Result<Vec<CompressImageResult>
                 (original_size as f64 - compressed_size as f64) / original_size as f64 * 100.0;
 
             let result = CompressImageResult {
+                id: file_path.display().to_string(),
                 original_size: original_size / 1024,
                 compressed_size: compressed_size / 1024,
                 compression_ratio,
                 output_path: output_path.display().to_string(),
                 input_path: file_path.display().to_string(),
-                is_compressed: true,
+                status: "completed".to_string(),
                 duration,
             };
             app.emit("compress-image", &result).unwrap();

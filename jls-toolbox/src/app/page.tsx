@@ -5,7 +5,7 @@ export default function Home() {
     <div>
       <ul>
         <li>
-          <Link href="/image-compressor">Image Compressor</Link>
+          <Link href="/image/image-compress">Image Compressor</Link>
         </li>
       </ul>
     </div>
